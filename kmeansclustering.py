@@ -4,25 +4,19 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 from matplotlib import pyplot  as plt
-%matplotlib inline
-
+# % matplotlib inline
 
 dataframe=pd.read_csv('data.csv')
-# dataframe.head()
 
 
-# kmeans=KMeans(n_clusters=20, init='k-means++',max_iter=100, n_init=1, verbose=0, random_state=3425)
-kmeans=KMeans(n_clusters=20)
-# scaler = MinMaxScaler()
+#defining  KMeans
+kmeans=KMeans(n_clusters=100, init='k-means++', max_iter=100, n_init=1, verbose=0, random_state=3425)
+
+"""
+Normalizing numerical columns of the graph using Standard Scalar to perform k-means clustering
+"""
+
 scaler=StandardScaler()
-
-# newdf = dataframe.select_dtypes(np.number)
-# scaled=scaler.fit_transform(newdf)
-
-"""
-Normalizing column values so they are between 0 and 1 using Standard Scaler
-"""
-
 scaler.fit(dataframe[['loudness']])
 dataframe['loudness'] = scaler.transform(dataframe[['loudness']])
 scaler.fit(dataframe[['tempo']])
@@ -41,35 +35,56 @@ scaler.fit(dataframe[['popularity']])
 dataframe['popularity'] = scaler.transform(dataframe[['popularity']])
 
 
-# dataframe.head()
-
-
 """
-Performs K-Means clustering on given N features
+Perform K-Means clustering on N features
 """
-clustering=kmeans.fit_predict(dataframe[['acousticness','valence','danceability','energy','instrumentalness','liveness','loudness','speechiness','tempo','key','duration_ms','explicit','mode','popularity','year']])
-#clustering 
+clustering=kmeans.fit_predict(dataframe[['acousticness','valence','danceability','energy','instrumentalness','liveness','loudness','speechiness','tempo','key','duration_ms','mode']])
 
+
+#adding the predicted clusterings to the dataframe graph as a column
 dataframe["cluster"]=clustering
-# dataframe.head(50)
+
+#make a dataframe with the features as columns of the top5 songs of the user
+top5user=pd.DataFrame(data=results2)
 
 
 """
-Performs PCA on the clustering inorder to visualise clustering in two dimensions
+Normalize the numerical columns for the top5 songs usin Standard Scaler
 """
-from sklearn.decomposition import PCA
-pca = PCA(n_components=2)
-# scaler.fit_transform(datafa)
-song=pca.fit_transform(dataframe[['acousticness','valence','danceability','energy','instrumentalness','liveness','loudness','speechiness','tempo','key','duration_ms','explicit','mode','popularity','year']])
+scaler.fit(top5user[['loudness']])
+top5user['loudness'] = scaler.transform(top5user[['loudness']])
+scaler.fit(top5user[['tempo']])
+top5user['tempo'] = scaler.transform(top5user[['tempo']])
+scaler.fit(top5user[['key']])
+top5user['key'] = scaler.transform(top5user[['key']])
+scaler.fit(top5user[['duration_ms']])
+top5user['duration_ms'] = scaler.transform(top5user[['duration_ms']])
+scaler.fit(top5user[['mode']])
+top5user['mode'] = scaler.transform(top5user[['mode']])
 
-graph = pd.DataFrame(columns=['x', 'y'], data=song)
-graph['title'] = dataframe['name']
-graph['cluster'] = dataframe['cluster']
 
+#predict which clusters the top5 songs belong to using the k-means cluster that we built
+clustering5songs=kmeans.predict(top5user[['acousticness','valence','danceability','energy','instrumentalness','liveness','loudness','speechiness','tempo','key','duration_ms','mode']])
 
 """
-Displays the clustering after the PCA decomposition has been done on the K-means clustering on N features.
+Making the recommendations
 """
-import plotly.express as px
-plot = px.scatter(graph, x='x', y='y', color='cluster', hover_data=['x', 'y', 'title'])
-plot.show()
+
+finalreccoid=[] 
+finalrecconame=[]
+
+for x in clustering5songs:
+    filtereddf=dataframe.loc[dataframe['cluster']==x]
+    filtereddf=filtereddf.sample(n=5)
+    recommendedsongidlist=filtereddf['id'].tolist()
+    recommendedsongnamelist=filtereddf['name'].tolist()
+    finalreccoid.extend(recommendedsongidlist)
+    finalrecconame.extend(recommendedsongnamelist)
+    
+    
+# print(finalreccoid)
+# print(finalrecconame)
+
+
+#finalreccoid is the list of ids 
+#finalrecconame is the list of names
