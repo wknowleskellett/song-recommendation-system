@@ -8,14 +8,21 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
-from matplotlib import pyplot  as plt
+from matplotlib import pyplot as plt
+import configparser
 
-cid = 'b724fb0e25894e9f97220f2a560a3789'
-secret = '29d7540a9f1245ac855efd1db30ae5c3'
+config = configparser.ConfigParser()
+config.read('config.ini')
+cid = config['Service']['cid']
+secret = config['Service']['secret']
 uri = 'http://localhost:8888/callback'
-scope = "user-top-read,user-library-read,user-follow-read,user-read-currently-playing,user-read-recently-played,playlist-modify-private"
-birdy_uri = 'spotify:artist:2WX2uTcsvV5OnS0inACecP'
-scope = "user-top-read,user-library-read,user-follow-read,user-read-currently-playing,user-read-recently-played,playlist-modify-private,playlist-modify-public"
+scope = ','.join(['user-top-read',
+                  'user-library-read',
+                  'user-follow-read',
+                  'user-read-currently-playing',
+                  'user-read-recently-played',
+                  'playlist-modify-private',
+                  'playlist-modify-public'])
 
 #user sign in
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=cid, client_secret=secret, redirect_uri=uri))
