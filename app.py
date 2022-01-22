@@ -30,8 +30,8 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=cid, clien
 #get the users top 5 songs 
 track_id = [] #list that stores the track ids of the user's top tracks
 results = sp.current_user_top_tracks() 
-for i, item in enumerate(results['items'][:5]): 
-   print(i+1, ") track: ", item['name'], ", artist: ", item['artists'][0]['name'], ", track ID: ", item['id'])
+for i, item in enumerate(results['items'][:5]):
+   print(f"{i+1}) track: {item['name']}, artist: {item['artists'][0]['name']}, track ID: {item['id']}")
    track_id.append(item['id'])
 
 #get user info
@@ -55,22 +55,17 @@ Normalizing numerical columns of the graph using Standard Scalar to perform k-me
 """
 
 scaler=StandardScaler()
-scaler.fit(dataframe[['loudness']])
-dataframe['loudness'] = scaler.transform(dataframe[['loudness']])
-scaler.fit(dataframe[['tempo']])
-dataframe['tempo'] = scaler.transform(dataframe[['tempo']])
-scaler.fit(dataframe[['key']])
-dataframe['key'] = scaler.transform(dataframe[['key']])
-scaler.fit(dataframe[['year']])
-dataframe['year'] = scaler.transform(dataframe[['year']])
-scaler.fit(dataframe[['duration_ms']])
-dataframe['duration_ms'] = scaler.transform(dataframe[['duration_ms']])
-scaler.fit(dataframe[['explicit']])
-dataframe['explicit'] = scaler.transform(dataframe[['explicit']])
-scaler.fit(dataframe[['mode']])
-dataframe['mode'] = scaler.transform(dataframe[['mode']])
-scaler.fit(dataframe[['popularity']])
-dataframe['popularity'] = scaler.transform(dataframe[['popularity']])
+numerical_columns = ['loudness',
+                     'tempo',
+                     'key',
+                     'year',
+                     'duration_ms',
+                     'explicit',
+                     'mode',
+                     'popularity']
+for label in numerical_columns:
+    scaler.fit(dataframe[[label]])
+    dataframe[label] = scaler.transform(dataframe[[label]])
 
 
 """
@@ -80,25 +75,27 @@ clustering=kmeans.fit_predict(dataframe[['acousticness','valence','danceability'
 
 
 #adding the predicted clusterings to the dataframe graph as a column
-dataframe["cluster"]=clustering
+dataframe['cluster']=clustering
 
 #make a dataframe with the features as columns of the top5 songs of the user
 top5user=pd.DataFrame(data=results2)
 
 
 """
-Normalize the numerical columns for the top5 songs usin Standard Scaler
+Normalize the numerical columns for the top5 songs using Standard Scaler
 """
-scaler.fit(top5user[['loudness']])
-top5user['loudness'] = scaler.transform(top5user[['loudness']])
-scaler.fit(top5user[['tempo']])
-top5user['tempo'] = scaler.transform(top5user[['tempo']])
-scaler.fit(top5user[['key']])
-top5user['key'] = scaler.transform(top5user[['key']])
-scaler.fit(top5user[['duration_ms']])
-top5user['duration_ms'] = scaler.transform(top5user[['duration_ms']])
-scaler.fit(top5user[['mode']])
-top5user['mode'] = scaler.transform(top5user[['mode']])
+user_numerical_columns = ['loudness',
+                          'tempo',
+                          'key',
+                          # 'year',
+                          'duration_ms',
+                          # 'explicit',
+                          'mode',
+                          # 'popularity'
+                          ]
+for label in user_numerical_columns:
+    scaler.fit(top5user[[label]])
+    top5user[label] = scaler.transform(top5user[[label]])
 
 
 #predict which clusters the top5 songs belong to using the k-means cluster that we built
@@ -120,18 +117,19 @@ for x in clustering5songs:
     finalreccoid.extend(recommendedsongidlist)
     finalrecconame.extend(recommendedsongnamelist)
 
+print('These songs are in the generated playlist:')
+for songid in finalreccoid:
+    print(songid) # TODO convert these to song names
+print()
+
 #create a playlist for the user
-playlist_name = 'New recommended songs'
-playlist_description = 'Thanks for using the songs recommendation system app. In this playlist, you can find your 25 recommended songs. Here are the top 5 tracks we used to make the playlist: '
-for i, item in enumerate(results['items'][:5]): 
-   playlist_description += f"{item['name']} by {item['artists'][0]['name']}, "
-results3 = sp.user_playlist_create(user_id, playlist_name, public=True, collaborative=False, description=playlist_description)
-playlist_id = results3['id']
+playlist_name = input('What do you want to call your playlist? (Press Enter to cancel)\n')
+if playlist_name != '':
+    playlist_description = 'This playlist was constructed from these top 5 tracks: '
+    playlist_description += ', '.join([f"{item['name']} by {item['artists'][0]['name']}gq"
+                                       for i, item in enumerate(results['items'][:5])])
+    results3 = sp.user_playlist_create(user_id, playlist_name, public=True, collaborative=False, description=playlist_description)
+    playlist_id = results3['id']
 
-#add the songs to the playlist
-items = finalreccoid #list of ids of the songs i want to add to the playlist (get it from Harsha) #TODO
-results3 = sp.playlist_add_items(playlist_id, items, position=None)
-
-print(items)
-
-
+    #add the songs to the playlist
+    results3 = sp.playlist_add_items(playlist_id, finalreccoid, position=None)
