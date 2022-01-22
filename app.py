@@ -17,12 +17,15 @@ uri = 'http://localhost:8888/callback'
 scope = "user-top-read,user-library-read,user-follow-read,user-read-currently-playing,user-read-recently-played,playlist-modify-private"
 birdy_uri = 'spotify:artist:2WX2uTcsvV5OnS0inACecP'
 
-sg.theme('DarkTeal2')   # Add a touch of color
-# All the stuff inside your window.
-layout = [  [sg.Text('Welcome to our Music Recommendation Program')],
+sg.theme('DarkTeal6')
+
+# window 
+layout = [  [sg.Text('Welcome to our Music Recommendation Program', size=(40,1), font=("Helvetica", 15))],
+            [sg.Text('Your Top Tracks', size=(40,1), font=("Helvetica", 12))],
             [sg.MLine(key='-ML1-'+sg.WRITE_ONLY_KEY, size=(40,8))],
+            [sg.Text('Recommended Tracks', size=(40,1), font=("Helvetica", 12))],
             [sg.MLine(key='-ML2-'+sg.WRITE_ONLY_KEY, size=(40,8))],
-            [sg.Button('Login'), sg.Button('Cancel')] ]
+            [sg.Button('Recommend'), sg.Button('Cancel')] ]
 
 # Create the Window
 window = sg.Window('Music Recommender', layout)
@@ -34,12 +37,12 @@ while True:
         break
     #user sign in
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=cid, client_secret=secret, redirect_uri=uri))
-        
+    
     #get the users top 5 songs 
     track_id = [] #list that stores the track ids of the user's top tracks
     results = sp.current_user_top_tracks() 
-    for i, item in enumerate(results['items'][:5]): 
-        window['-ML1-'+sg.WRITE_ONLY_KEY].print(idx, track['artists'][0]['name'], " – ", track['name'])
+    for i, item in enumerate(results['items'][:5]):
+        window['-ML1-'+sg.WRITE_ONLY_KEY].print(i+1, ")", item['name'], "by", item['artists'][0]['name'])
         track_id.append(item['id'])
 
     #get user info
@@ -138,7 +141,11 @@ while True:
     #add the songs to the playlist
     items = finalreccoid #list of ids of the songs i want to add to the playlist (get it from Harsha) #TODO
     results3 = sp.playlist_add_items(playlist_id, items, position=None)
-
+    
+    i=0
+    for song in finalrecconame:   
+        window['-ML2-'+sg.WRITE_ONLY_KEY].print(i+1, ")", song)
+        i += 1
 
 window.close()
 
