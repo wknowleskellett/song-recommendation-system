@@ -35,14 +35,69 @@ layout = [[sg.Text('Welcome to our Music Recommendation Program', size=(40, 1), 
           [sg.MLine(key='-ML2-' + sg.WRITE_ONLY_KEY, size=(40, 8))],
           [sg.Button('Recommend'), sg.Button('Exit')]]
 
+def open_window():
+    second_window = [[sg.Text("Playlist Name", size=(10, 1)), sg.Input(size=(30, 1), key='-USERNAME-')],
+                [sg.Column([[sg.Button("Add Playlist"), sg.Button("Exit")]], justification='center')],
+                [sg.StatusBar("", size=(0, 1), key='-STATUS-')]
+                ]
+    newwindow = sg.Window("Second Window", second_window, modal=True)
+    choice = None
+    while True:
+        event, values = window.read()
+        if event == "Exit" or event == sg.WIN_CLOSED:
+            break
+    window.close()
+
+def playlist_window(finalreccoid):
+        klayout = [
+        [sg.Text("Input a playlist name to add the tracks to your Spotify account", size=(45, 1))],
+        [sg.Text("Playlist Name", size=(10, 1)), sg.Input(size=(30, 1), key='Name')],
+        [sg.Column([[sg.Button("Add Playlist"), sg.Button("Exit")]], justification='center')],
+        [sg.StatusBar("", size=(0, 1), key='-STATUS-')]
+        ]
+        new_window = sg.Window('Add Playlist to Spotify', klayout, finalize=True)
+
+        while True:
+            event, values = new_window.read()
+            if event in (sg.WINDOW_CLOSED, "Exit"):
+                break
+            elif event == "Add Playlist":
+                playlistname = values['Name']
+                if playlistname:
+                    # state = "Login OK" if login(username, password) else "Login failed"
+                    playlist_description = 'This playlist was constructed from these top 5 tracks: '
+                    playlist_description += ', '.join([f"{item['name']} by {item['artists'][0]['name']}gq"
+                                                       for i, item in enumerate(results['items'][:5])])
+                    results3 = sp.user_playlist_create(user_id, playlistname, public=True, collaborative=False,
+                                                       description=playlist_description)
+                    playlist_id = results3['id']
+                    
+                    # add the songs to the playlist
+                    results3 = sp.playlist_add_items(playlist_id, finalreccoid, position=None)
+                    
+                    state = playlistname + " was added to your Spotify Account"
+                    # playlist creation confirmation
+                    new_window['-STATUS-'].update(state)
+                else:
+                    state = "Playlist name required"
+                new_window['-STATUS-'].update(state)
+
+        new_window.close()
+
+
 # Create the Window
 window = sg.Window('Music Recommender', layout)
 # Event Loop to process "events" and get the "values" of the inputs
 
 while True:
+    # print("back to beginning")  
     event, values = window.read()
     if event == sg.WIN_CLOSED or event == 'Exit':  # if user closes window or clicks cancel
+        #print("closing here")
         break
+#     if event == sg.WIN_CLOSED or event == 'Close':  # if user closes window or clicks cancel
+#         print("closing here")
+#         break
     # user sign in
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=cid, client_secret=secret, redirect_uri=uri))
 
@@ -50,8 +105,8 @@ while True:
     track_id = []  # list that stores the track ids of the user's top tracks
     results = sp.current_user_top_tracks()
     for i, item in enumerate(results['items'][:5]):
-        window['-ML1-' + sg.WRITE_ONLY_KEY].print(
-            f"{i + 1}) track: {item['name']}, artist: {item['artists'][0]['name']}, track ID: {item['id']}")
+        window['-ML1-'+sg.WRITE_ONLY_KEY].print(
+            i+1, ")", item['name'], "by", item['artists'][0]['name']) 
         track_id.append(item['id'])
 
     # get user info
@@ -134,22 +189,26 @@ while True:
         recommendedsongnamelist = filtereddf['name'].tolist()
         finalreccoid.extend(recommendedsongidlist)
         finalrecconame.extend(recommendedsongnamelist)
-
-    # create a playlist for the user
-    playlist_name = input('What do you want to call your playlist? (Press Enter to cancel)\n')
-    if playlist_name != '':
-        playlist_description = 'This playlist was constructed from these top 5 tracks: '
-        playlist_description += ', '.join([f"{item['name']} by {item['artists'][0]['name']}gq"
-                                           for i, item in enumerate(results['items'][:5])])
-        results3 = sp.user_playlist_create(user_id, playlist_name, public=True, collaborative=False,
-                                           description=playlist_description)
-        playlist_id = results3['id']
-
-        # add the songs to the playlist
-        results3 = sp.playlist_add_items(playlist_id, finalreccoid, position=None)
-
+        
     for i, song in enumerate(finalrecconame):
         window['-ML2-' + sg.WRITE_ONLY_KEY].print(f"{i + 1}) {song}")
+
+    # create a playlist for the user
+    # playlist_name = input('What do you want to call your playlist? (Press Enter to cancel)\n')
+    # if playlist_name != '':
+#         playlist_description = 'This playlist was constructed from these top 5 tracks: '
+#         playlist_description += ', '.join([f"{item['name']} by {item['artists'][0]['name']}gq"
+#                                            for i, item in enumerate(results['items'][:5])])
+#         results3 = sp.user_playlist_create(user_id, playlist_name, public=True, collaborative=False,
+#                                            description=playlist_description)
+#         playlist_id = results3['id']
+# 
+#         # add the songs to the playlist
+#         results3 = sp.playlist_add_items(playlist_id, finalreccoid, position=None)
+# 
+    
+
+    playlist_window(finalreccoid)
 
 window.close()
 
