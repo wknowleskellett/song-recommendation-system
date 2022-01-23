@@ -1,5 +1,7 @@
 # song-recommendation-system
 
+This project will allow you to create a spotify album from your favorite songs.
+
 ## Preparation
 
 Since this project is in active development, submit your spotify username
