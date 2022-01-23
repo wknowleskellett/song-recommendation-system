@@ -60,7 +60,7 @@ def playlist_window(finalreccoid):
                 if playlistname:
                     # state = "Login OK" if login(username, password) else "Login failed"
                     playlist_description = 'This playlist was constructed from these top 5 tracks: '
-                    playlist_description += ', '.join([f"{item['name']} by {item['artists'][0]['name']}gq"
+                    playlist_description += ', '.join([f"{item['name']} by {item['artists'][0]['name']}"
                                                        for i, item in enumerate(results['items'][:5])])
                     results3 = sp.user_playlist_create(user_id, playlistname, public=True, collaborative=False,
                                                        description=playlist_description)
