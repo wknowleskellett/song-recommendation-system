@@ -35,19 +35,6 @@ layout = [[sg.Text('Welcome to our Music Recommendation Program', size=(40, 1), 
           [sg.MLine(key='-ML2-' + sg.WRITE_ONLY_KEY, size=(40, 8))],
           [sg.Button('Recommend'), sg.Button('Exit')]]
 
-def open_window():
-    second_window = [[sg.Text("Playlist Name", size=(10, 1)), sg.Input(size=(30, 1), key='-USERNAME-')],
-                [sg.Column([[sg.Button("Add Playlist"), sg.Button("Exit")]], justification='center')],
-                [sg.StatusBar("", size=(0, 1), key='-STATUS-')]
-                ]
-    newwindow = sg.Window("Second Window", second_window, modal=True)
-    choice = None
-    while True:
-        event, values = window.read()
-        if event == "Exit" or event == sg.WIN_CLOSED:
-            break
-    window.close()
-
 def playlist_window(finalreccoid):
         klayout = [
         [sg.Text("Input a playlist name to add the tracks to your Spotify account", size=(45, 1))],
@@ -87,17 +74,14 @@ def playlist_window(finalreccoid):
 
 # Create the Window
 window = sg.Window('Music Recommender', layout)
-# Event Loop to process "events" and get the "values" of the inputs
 
+# Event Loop to process events and get input
 while True:
-    # print("back to beginning")  
+
     event, values = window.read()
     if event == sg.WIN_CLOSED or event == 'Exit':  # if user closes window or clicks cancel
-        #print("closing here")
         break
-#     if event == sg.WIN_CLOSED or event == 'Close':  # if user closes window or clicks cancel
-#         print("closing here")
-#         break
+    
     # user sign in
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=cid, client_secret=secret, redirect_uri=uri))
 
@@ -192,20 +176,6 @@ while True:
         
     for i, song in enumerate(finalrecconame):
         window['-ML2-' + sg.WRITE_ONLY_KEY].print(f"{i + 1}) {song}")
-
-    # create a playlist for the user
-    # playlist_name = input('What do you want to call your playlist? (Press Enter to cancel)\n')
-    # if playlist_name != '':
-#         playlist_description = 'This playlist was constructed from these top 5 tracks: '
-#         playlist_description += ', '.join([f"{item['name']} by {item['artists'][0]['name']}gq"
-#                                            for i, item in enumerate(results['items'][:5])])
-#         results3 = sp.user_playlist_create(user_id, playlist_name, public=True, collaborative=False,
-#                                            description=playlist_description)
-#         playlist_id = results3['id']
-# 
-#         # add the songs to the playlist
-#         results3 = sp.playlist_add_items(playlist_id, finalreccoid, position=None)
-# 
     
 
     playlist_window(finalreccoid)
