@@ -12,6 +12,13 @@ from matplotlib import pyplot  as plt
 import PySimpleGUI as sg
 import configparser
 
+RECOMMEND = ['Recommend', 'Refresh']
+CREATE_PLAYLIST = 'Create Playlist'
+ADD_PLAYLIST = 'Add Playlist'
+EXIT = 'Exit'
+CANCEL = 'Cancel'
+OK = 'Ok'
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 cid = config['Service']['cid']
@@ -33,22 +40,22 @@ layout = [[sg.Text('Welcome to our Music Recommendation Program', size=(40, 1), 
           [sg.MLine(key='-ML1-' + sg.WRITE_ONLY_KEY, size=(40, 8))],
           [sg.Text('Recommended Tracks', size=(40, 1), font=("Helvetica", 12))],
           [sg.MLine(key='-ML2-' + sg.WRITE_ONLY_KEY, size=(40, 8))],
-          [sg.Button('Recommend'), sg.Button('Exit')]]
+          [sg.Button(RECOMMEND[0]), sg.Button(CREATE_PLAYLIST, disabled=True, disabled_button_color='gray'), sg.Button(EXIT)]]
 
 def playlist_window(finalreccoid):
         klayout = [
         [sg.Text("Input a playlist name to add the tracks to your Spotify account", size=(45, 1))],
         [sg.Text("Playlist Name", size=(10, 1)), sg.Input(size=(30, 1), key='Name')],
-        [sg.Column([[sg.Button("Add Playlist"), sg.Button("Exit")]], justification='center')],
+        [sg.Column([[sg.Button(ADD_PLAYLIST, disabled_button_color='gray'), sg.Button(CANCEL)]], justification='center')],
         [sg.StatusBar("", size=(0, 1), key='-STATUS-')]
         ]
         new_window = sg.Window('Add Playlist to Spotify', klayout, finalize=True)
 
         while True:
             event, values = new_window.read()
-            if event in (sg.WINDOW_CLOSED, "Exit"):
+            if event in (sg.WINDOW_CLOSED, CANCEL, OK):
                 break
-            elif event == "Add Playlist":
+            elif event == ADD_PLAYLIST:
                 playlistname = values['Name']
                 if playlistname:
                     # state = "Login OK" if login(username, password) else "Login failed"
@@ -63,10 +70,11 @@ def playlist_window(finalreccoid):
                     results3 = sp.playlist_add_items(playlist_id, finalreccoid, position=None)
                     
                     state = playlistname + " was added to your Spotify Account"
-                    # playlist creation confirmation
-                    new_window['-STATUS-'].update(state)
+                    new_window[ADD_PLAYLIST](disabled=True)
+                    new_window[CANCEL](OK)
                 else:
                     state = "Playlist name required"
+                # playlist creation confirmation
                 new_window['-STATUS-'].update(state)
 
         new_window.close()
@@ -74,111 +82,118 @@ def playlist_window(finalreccoid):
 
 # Create the Window
 window = sg.Window('Music Recommender', layout)
+top_songs_loaded = False
 
 # Event Loop to process events and get input
 while True:
 
     event, values = window.read()
-    if event == sg.WIN_CLOSED or event == 'Exit':  # if user closes window or clicks cancel
+    if event in (sg.WIN_CLOSED, EXIT):  # if user closes window or clicks exit
         break
-    
-    # user sign in
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=cid, client_secret=secret, redirect_uri=uri))
+    elif event == RECOMMEND[0]:
+        if not top_songs_loaded:
+            # user sign in
+            sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=cid, client_secret=secret, redirect_uri=uri))
 
-    # get the users top 5 songs
-    track_id = []  # list that stores the track ids of the user's top tracks
-    results = sp.current_user_top_tracks()
-    for i, item in enumerate(results['items'][:5]):
-        window['-ML1-'+sg.WRITE_ONLY_KEY].print(
-            i+1, ")", item['name'], "by", item['artists'][0]['name']) 
-        track_id.append(item['id'])
+            # get the users top 5 songs
+            track_id = []  # list that stores the track ids of the user's top tracks
+            results = sp.current_user_top_tracks()
+            for i, item in enumerate(results['items'][:5]):
+                window['-ML1-'+sg.WRITE_ONLY_KEY].print(
+                    i+1, ")", item['name'], "by", item['artists'][0]['name'])
+                track_id.append(item['id'])
 
-    # get user info
-    info = sp.current_user()
-    user_id = info['id']
-    user_name = info['display_name']
+            # get user info
+            info = sp.current_user()
+            user_id = info['id']
+            user_name = info['display_name']
 
-    # get audio features for a series of tracks
-    results2 = sp.audio_features(track_id)  # results has a list of dictionaries, which contain each song's features
-    # pprint(results2)
+            # get audio features for a series of tracks
+            results2 = sp.audio_features(track_id)  # results has a list of dictionaries, which contain each song's features
+            # pprint(results2)
 
-    dataframe = pd.read_csv('data.csv')
+            dataframe = pd.read_csv('data.csv')
 
-    # defining  KMeans
-    kmeans = KMeans(n_clusters=100, init='k-means++', max_iter=100, n_init=1, verbose=0, random_state=3425)
+            # defining  KMeans
+            kmeans = KMeans(n_clusters=100, init='k-means++', max_iter=100, n_init=1, verbose=0, random_state=3425)
 
-    """
-    Normalizing numerical columns of the graph using Standard Scalar to perform k-means clustering
-    """
+            """
+            Normalizing numerical columns of the graph using Standard Scalar to perform k-means clustering
+            """
 
-    scaler = StandardScaler()
-    numerical_columns = ['loudness',
-                         'tempo',
-                         'key',
-                         'year',
-                         'duration_ms',
-                         'explicit',
-                         'mode',
-                         'popularity']
-    for label in numerical_columns:
-        scaler.fit(dataframe[[label]])
-        dataframe[label] = scaler.transform(dataframe[[label]])
+            scaler = StandardScaler()
+            numerical_columns = ['loudness',
+                                 'tempo',
+                                 'key',
+                                 'year',
+                                 'duration_ms',
+                                 'explicit',
+                                 'mode',
+                                 'popularity']
+            for label in numerical_columns:
+                scaler.fit(dataframe[[label]])
+                dataframe[label] = scaler.transform(dataframe[[label]])
 
-    """
-    Perform K-Means clustering on N features
-    """
-    clustering = kmeans.fit_predict(dataframe[['acousticness', 'valence', 'danceability', 'energy', 'instrumentalness',
-                                               'liveness', 'loudness', 'speechiness', 'tempo', 'key', 'duration_ms',
-                                               'mode']])
+            """
+            Perform K-Means clustering on N features
+            """
+            clustering = kmeans.fit_predict(dataframe[['acousticness', 'valence', 'danceability', 'energy', 'instrumentalness',
+                                                       'liveness', 'loudness', 'speechiness', 'tempo', 'key', 'duration_ms',
+                                                       'mode']])
 
-    # adding the predicted clusterings to the dataframe graph as a column
-    dataframe["cluster"] = clustering
+            # adding the predicted clusterings to the dataframe graph as a column
+            dataframe["cluster"] = clustering
 
-    # make a dataframe with the features as columns of the top5 songs of the user
-    top5user = pd.DataFrame(data=results2)
+            # make a dataframe with the features as columns of the top5 songs of the user
+            top5user = pd.DataFrame(data=results2)
 
-    """
-    Normalize the numerical columns for the top5 songs using Standard Scaler
-    """
-    user_numerical_columns = ['loudness',
-                              'tempo',
-                              'key',
-                              # 'year',
-                              'duration_ms',
-                              # 'explicit',
-                              'mode',
-                              # 'popularity'
-                              ]
-    for label in user_numerical_columns:
-        scaler.fit(top5user[[label]])
-        top5user[label] = scaler.transform(top5user[[label]])
+            """
+            Normalize the numerical columns for the top5 songs using Standard Scaler
+            """
+            user_numerical_columns = ['loudness',
+                                      'tempo',
+                                      'key',
+                                      # 'year',
+                                      'duration_ms',
+                                      # 'explicit',
+                                      'mode',
+                                      # 'popularity'
+                                      ]
+            for label in user_numerical_columns:
+                scaler.fit(top5user[[label]])
+                top5user[label] = scaler.transform(top5user[[label]])
 
-    # predict which clusters the top5 songs belong to using the k-means cluster that we built
-    clustering5songs = kmeans.predict(top5user[['acousticness', 'valence', 'danceability', 'energy', 'instrumentalness',
-                                                'liveness', 'loudness', 'speechiness', 'tempo', 'key', 'duration_ms',
-                                                'mode']])
+            top_songs_loaded = True
+            window[CREATE_PLAYLIST].update(disabled=False)
+            window[RECOMMEND[0]](RECOMMEND[1])
 
-    """
-    Making the recommendations
-    """
+        # predict which clusters the top5 songs belong to using the k-means cluster that we built
+        clustering5songs = kmeans.predict(top5user[['acousticness', 'valence', 'danceability', 'energy', 'instrumentalness',
+                                                    'liveness', 'loudness', 'speechiness', 'tempo', 'key', 'duration_ms',
+                                                    'mode']])
 
-    finalreccoid = []
-    # list of song names
-    finalrecconame = []
+        """
+        Making the recommendations
+        """
 
-    for x in clustering5songs:
-        filtereddf = dataframe.loc[dataframe['cluster'] == x]
-        filtereddf = filtereddf.sample(n=5)
-        recommendedsongidlist = filtereddf['id'].tolist()
-        recommendedsongnamelist = filtereddf['name'].tolist()
-        finalreccoid.extend(recommendedsongidlist)
-        finalrecconame.extend(recommendedsongnamelist)
-        
-    for i, song in enumerate(finalrecconame):
-        window['-ML2-' + sg.WRITE_ONLY_KEY].print(f"{i + 1}) {song}")
-    
+        finalreccoid = []
+        # list of song names
+        finalrecconame = []
 
-    playlist_window(finalreccoid)
+        for x in clustering5songs:
+            filtereddf = dataframe.loc[dataframe['cluster'] == x]
+            filtereddf = filtereddf.sample(n=5)
+            recommendedsongidlist = filtereddf['id'].tolist()
+            recommendedsongnamelist = filtereddf['name'].tolist()
+            finalreccoid.extend(recommendedsongidlist)
+            finalrecconame.extend(recommendedsongnamelist)
+
+        window['-ML2-' + sg.WRITE_ONLY_KEY]('')
+        for i, song in enumerate(finalrecconame):
+            window['-ML2-' + sg.WRITE_ONLY_KEY].print(f"{i + 1}) {song}")
+
+    elif event == CREATE_PLAYLIST:
+        playlist_window(finalreccoid)
 
 window.close()
 
