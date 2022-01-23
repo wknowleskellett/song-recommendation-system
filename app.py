@@ -16,7 +16,7 @@ OK = 'Ok'
 
 def playlist_window(spotify_instance, user_id, results, reccoid):
     save_prompt_layout = [
-        [sg.Text("Input a playlist name to add the tracks to your Spotify account", size=(45, 1))],
+        [sg.Text("Input a playlist name to save the tracks", size=(45, 1))],
         [sg.Text("Playlist Name", size=(10, 1)), sg.Input(size=(30, 1), key='Name')],
         [sg.Column([[sg.Button(ADD_PLAYLIST, disabled_button_color='gray'), sg.Button(CANCEL)]],
                    justification='center')],
@@ -34,9 +34,10 @@ def playlist_window(spotify_instance, user_id, results, reccoid):
                 # state = "Login OK" if login(username, password) else "Login failed"
                 playlist_description = 'This playlist was constructed from these top 5 tracks: '
                 playlist_description += ', '.join([f"{item['name']} by {item['artists'][0]['name']}"
-                                                   for i, item in enumerate(results['items'])])
+                                                   for i, item in enumerate(results['items'][:5])])
                 create_playlist_result = spotify_instance.user_playlist_create(user_id, playlist_name, public=True,
-                                                                 collaborative=False, description=playlist_description)
+                                                                               collaborative=False,
+                                                                               description=playlist_description)
                 playlist_id = create_playlist_result['id']
 
                 # add the songs to the playlist
@@ -106,8 +107,8 @@ def main():
 
                 # get the users top 5 songs
                 track_ids = []  # list that stores the track ids of the user's top tracks
-                top_tracks = sp.current_user_top_tracks()[:5]
-                for i, item in enumerate(top_tracks['items']):
+                top_tracks = sp.current_user_top_tracks()
+                for i, item in enumerate(top_tracks['items'][:5]):
                     main_window['-ML1-' + sg.WRITE_ONLY_KEY].print(
                         f"{i + 1}) {item['name']} by {item['artists'][0]['name']}")
                     track_ids.append(item['id'])
@@ -183,20 +184,23 @@ def main():
             """
 
             finalreccoid = []
-            # list of song names
+            # list of song names, artists
             finalrecconame = []
+            finalreccoartist = []
 
             for x in recommended_songs:
                 filtereddf = dataframe.loc[dataframe['cluster'] == x]
                 filtereddf = filtereddf.sample(n=5)
                 recommendedsongidlist = filtereddf['id'].tolist()
                 recommendedsongnamelist = filtereddf['name'].tolist()
+                recommendedsongartistlist = filtereddf['artists'].tolist()
                 finalreccoid.extend(recommendedsongidlist)
                 finalrecconame.extend(recommendedsongnamelist)
+                finalreccoartist.extend(recommendedsongartistlist)
 
             main_window['-ML2-' + sg.WRITE_ONLY_KEY]('')
-            for i, song in enumerate(finalrecconame):
-                main_window['-ML2-' + sg.WRITE_ONLY_KEY].print(f"{i + 1}) {song}")
+            for (i, song), artist in zip(enumerate(finalrecconame), finalreccoartist):
+                main_window['-ML2-' + sg.WRITE_ONLY_KEY].print(f"{i + 1}) {song} by {artist[1:-1].split(',')[0][1:-1]}")
 
         elif event == CREATE_PLAYLIST:
             playlist_window(sp, user_id, top_tracks, finalreccoid)
