@@ -34,9 +34,10 @@ With this system, use `source ai-songs/bin/activate` and `deactivate` to enter a
 
 Upon opening the program, the window will appear blank. 
 
-1. Start the process by clicking `Recommend`
-2. Log in if you haven't already
-3. Once that has processed, you may review the songs listed and decide whether
+1. Run `python app.py`
+2. Start the process by clicking `Recommend`
+3. Log in if you haven't already
+4. Once that has processed, you may review the songs listed and decide whether
 you'd like to keep the playlist. Hit refresh as many times as you'd like.
 4. Once you like the playlist that has been produced, press `Create Playlist` and choose a name.
 
